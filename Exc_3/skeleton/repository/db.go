@@ -79,10 +79,29 @@ func prepopulate(dbConn *gorm.DB) error {
 		// don't prepopulate if has already run
 		return nil
 	}
-	// create drink menu
-	// todo create drinks
-	// todo create orders
-	// GORM documentation can be found here: https://gorm.io/docs/index.html
+	drinks := []model.Drink{
+		{Name: "Espresso", Price: 2.50, Description: "Quick Coffee"},
+		{Name: "Latte", Price: 3.00, Description: "Milky Coffee"},
+		{Name: "Cappuccino", Price: 3.00, Description: "Milky Coffee with foam"},
+		{Name: "Americano", Price: 2.75, Description: "Black Coffee"},
+		{Name: "Mocha", Price: 3.50, Description: "Chocolate Coffee"},
+	}
+	err = dbConn.Create(&drinks).Error
+	if err != nil {
+		return err
+	}
+
+	orders := []model.Order{
+		{DrinkID: drinks[0].ID, Amount: 2},
+		{DrinkID: drinks[1].ID, Amount: 1},
+		{DrinkID: drinks[2].ID, Amount: 3},
+		{DrinkID: drinks[0].ID, Amount: 1},
+		{DrinkID: drinks[3].ID, Amount: 2},
+	}
+	err = dbConn.Create(&orders).Error
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
