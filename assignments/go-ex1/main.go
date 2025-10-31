@@ -2,18 +2,25 @@ package main
 
 import "fmt"
 
-// Student represents a struct with Name and Course fields.
+// 1️⃣ Define the struct
 type Student struct {
-	Name   string
-	Course string
+	Name    string
+	Program string
+	School  string
 }
 
-// Describe is a method with a receiver that prints the struct's contents.
-func (s Student) Describe() {
-	fmt.Printf("Hello! My name is %s and I am studying %s.\n", s.Name, s.Course)
+// 2️⃣ Define a method with receiver
+func (s Student) Introduce() {
+	fmt.Printf("Hello! My name is %s and I am studying %s at %s.\n",
+		s.Name, s.Program, s.School)
 }
 
+// 3️⃣ Call the method in main
 func main() {
-	me := Student{Name: "Mustapha Oluwatoyin Gali", Course: "Artificial Intelligent Solution at FH Upper Austria"}
-	me.Describe()
+	me := Student{
+		Name:    "Mustapha Oluwatoyin Gali",
+		Program: "Artificial Intelligent Solution",
+		School:  "FH Upper Austria",
+	}
+	me.Introduce()
 }
