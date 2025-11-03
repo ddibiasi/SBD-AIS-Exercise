@@ -1,1 +1,37 @@
-# todo
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:3000"
+    networks:
+      - app-network
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_DB=order
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker2asdsadff
+      - POSTGRES_TCP_PORT=5432 
+      - DB_HOST=db
+
+  db:
+    image: postgres:18
+    environment:
+      - POSTGRES_DB=order
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker2asdsadff
+      - POSTGRES_TCP_PORT=5432
+      - DB_HOST=127.0.0.1
+    volumes:
+      - db-data:/var/lib/postgresql
+    networks:
+      - app-network
+
+volumes:
+  db-data:
+
+networks:
+  app-network:
+    driver: bridge
