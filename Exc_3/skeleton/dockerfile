@@ -1,0 +1,35 @@
+# -------- Stage 1: builder --------
+FROM golang:1.25 AS builder
+WORKDIR /app
+
+# Copy mod files first (cache-friendly)
+COPY go.mod ./
+# If go.sum exists locally, copy it too (optional)
+# COPY go.sum ./
+
+RUN go mod download
+
+# Now copy the rest of the source
+COPY . .
+
+# Make sure all imports are recorded in go.sum
+RUN go mod tidy
+
+# Build a static Linux binary (runs fine on Alpine)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /app/ordersystem .
+
+
+# -------- Stage 2: runner --------
+FROM alpine:3.20
+RUN adduser -D -H app
+WORKDIR /app
+USER app
+
+# binary
+COPY --from=builder /app/ordersystem /app/ordersystem
+# this line to ship the static site
+COPY --from=builder /app/frontend /app/frontend
+
+EXPOSE 3000
+ENTRYPOINT ["/app/ordersystem"]
