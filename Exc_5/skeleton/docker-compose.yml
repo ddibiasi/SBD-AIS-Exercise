@@ -1,0 +1,85 @@
+networks:
+  web:
+    name: web
+  intercom:
+    name: intercom
+
+volumes:
+  order_pg_vol:
+
+services:
+  traefik:
+    image: "traefik:v3.5.2"
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=web"
+      - "--entryPoints.web.address=:80"
+      - "--api.insecure=true"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - web
+
+  orderservice:
+    container_name: orderservice
+    build: .
+    command: ["/app/ordersystem"]
+    depends_on:
+      order-postgres:
+        condition: service_healthy
+    environment:
+      - POSTGRES_DB=docker
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_TCP_PORT=5432
+      - DB_HOST=order-postgres
+    labels:
+      - "traefik.enable=true"
+      # Route either:
+      #  - Host: orders.localhost
+      #  - OR Host: localhost AND path starts with /api/
+      - "traefik.http.routers.orders.rule=Host(`orders.localhost`) || (Host(`localhost`) && PathPrefix(`/api/`))"
+      - "traefik.http.routers.orders.entrypoints=web"
+      - "traefik.http.services.orders-service.loadbalancer.server.port=3000"
+    networks:
+      - intercom
+      - web
+
+  sws:
+    image: joseluisq/static-web-server:2
+    volumes:
+      - ./frontend:/public:ro
+    environment:
+      - FOLDER_PATH=/public
+      - PORT=80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sws.rule=Host(`localhost`)"
+      - "traefik.http.routers.sws.entrypoints=web"
+      - "traefik.http.services.sws-service.loadbalancer.server.port=80"
+    networks:
+      - web
+
+  order-postgres:
+    image: postgres:latest
+    restart: always
+    networks:
+      - intercom
+    volumes:
+      - order_pg_vol:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docker"]
+      interval: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=docker
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_TCP_PORT=5432
+      - PGDATA=/var/lib/postgresql/data
