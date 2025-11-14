@@ -25,3 +25,60 @@ The orderservice uses the port 3000, keep in mind when setting up its traefik la
 The static web server can be [configured via environment variables](https://static-web-server.net/configuration/environment-variables/),
 to expose port 80 and serve the frontend folder.
 
+Below are the steps I took in solving the above task:
+
+Exercise 5 — Orderservice (Mustapha Oluwatoyin Gali)
+1. Overview
+
+This exercise implements the Orderservice using Go, Docker, PostgreSQL, and Traefik as the reverse proxy.
+It includes API endpoints for managing drinks, orders, totals, and database interactions.
+
+2. Technologies Used
+
+Go 1.23+
+
+Docker & Docker Compose
+
+Traefik Reverse Proxy
+
+PostgreSQL
+
+Swagger / OpenAPI documentation
+
+3. Folder Structure
+Exc_5/
+│── skeleton/
+│   ├── main.go
+│   ├── model/
+│   ├── rest/
+│   ├── repository/
+│   ├── docs/
+│   ├── docker-compose.yml
+│   └── Dockerfile
+│── README.md
+
+4. How to Build & Run
+Option A — Using Docker Compose
+cd Exc_5/skeleton
+docker-compose up --build
+
+Option B — Manual Run
+go mod tidy
+go run main.go
+
+5. API Documentation
+
+After running the service, open Swagger UI:
+
+http://localhost:8080/swagger/index.html
+
+
+OR if behind Traefik:
+
+http://orders.localhost/swagger/index.html
+
+6. Author
+
+Gali Mustapha Oluwatoyin
+AIS — Software Architecture for Big Data
+Johannes Kepler University Linz
