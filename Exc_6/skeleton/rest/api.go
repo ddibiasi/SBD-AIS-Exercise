@@ -1,14 +1,18 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"ordersystem/httptools"
 	"ordersystem/model"
 	"ordersystem/repository"
+	"ordersystem/storage"
+	"strings"
 
 	"github.com/go-chi/render"
 	"github.com/minio/minio-go/v7"
@@ -109,17 +113,30 @@ func GetReceiptFile(db *repository.DatabaseHandler, s3 *minio.Client) http.Handl
 			render.JSON(w, r, "Unable to load order")
 			return
 		}
+
 		// read from s3
-		// todo
-		// Get the file from s3 using s3.GetObject(), the bucket name is defined in storage.OrdersBucket
-		// dbOrder.Filename() can be used to get the filename.
-		// handle any error!
+		ctx := context.Background()
+		filename := order.GetFilename()
+
+		obj, err := s3.GetObject(ctx, storage.OrdersBucket, filename, minio.GetObjectOptions{})
+		if err != nil {
+			slog.Error("Unable to get receipt from S3", slog.String("error", err.Error()))
+			render.Status(r, http.StatusInternalServerError)
+			render.JSON(w, r, "Unable to load receipt file")
+			return
+		}
+		defer obj.Close()
 
 		// serve file
-		// todo
-		// set the correct header on w http.ResponseWriter ("Content-Type" and "Content-Disposition")
-		// Use the correct filename for "Content-Disposition" (https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Disposition)
-		// io.Copy can be used to write the result of s3.GetObject() to w http.ResponseWriter
+		w.Header().Set("Content-Type", "text/markdown")
+		// attachment so the browser will download it with the correct name
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+		if _, err := io.Copy(w, obj); err != nil {
+			slog.Error("Unable to stream receipt file", slog.String("error", err.Error()))
+			// at this point headers are already sent, so we just log the error
+			return
+		}
 	}
 }
 
@@ -159,14 +176,29 @@ func PostOrder(db *repository.DatabaseHandler, s3 *minio.Client) http.HandlerFun
 			render.JSON(w, r, "Unable to add order to db")
 			return
 		}
+
 		// store to s3
-		// todo
-		// call dbOrder.ToMarkdown() --> use strings.NewReader to create a reader
-		// Put the file into s3 using s3.PutObject(), the bucket name is defined in storage.OrdersBucket
-		// dbOrder.Filename() can be used to get the filename.
-		// Size of the file is determined by the string.
-		// Use the following PutObjectOptions: minio.PutObjectOptions{ContentType: "text/markdown"}
-		// Handle errors!
+		ctx := context.Background()
+		markdown := dbOrder.ToMarkdown()
+		reader := strings.NewReader(markdown)
+		size := int64(len(markdown))
+		filename := dbOrder.GetFilename()
+
+		_, err = s3.PutObject(
+			ctx,
+			storage.OrdersBucket,
+			filename,
+			reader,
+			size,
+			minio.PutObjectOptions{ContentType: "text/markdown"},
+		)
+		if err != nil {
+			slog.Error("Unable to store receipt in S3", slog.String("error", err.Error()))
+			render.Status(r, http.StatusInternalServerError)
+			render.JSON(w, r, "Unable to store receipt")
+			return
+		}
+
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, "ok")
 	}
