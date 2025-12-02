@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  order-db:
+    image: postgres:16-alpine
+    container_name: ex4-postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: order
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - ex4-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docker -d order"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - ex4-internal-network
+
+  ordersystem:
+    build:
+      context: ./orderservice
+      dockerfile: Dockerfile
+    depends_on:
+      order-db:
+        condition: service_healthy
+    environment:
+      POSTGRES_DB: order
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_TCP_PORT: "5432"
+      DB_HOST: order-db
+    ports:
+      - "3000:3000"
+    command: ["./ordersystem"]
+    networks:
+      - ex4-internal-network
+
+volumes:
+  ex4-db-data:
+
+networks:
+  ex4-internal-network:
+    name: ex4-internal-network
