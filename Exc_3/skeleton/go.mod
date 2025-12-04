@@ -3,6 +3,11 @@ module ordersystem
 go 1.25.1
 
 require (
+<<<<<<< HEAD
+	gorm.io/driver/postgres v1.5.9
+	gorm.io/gorm v1.25.11
+	github.com/joho/godotenv v1.5.1
+=======
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-chi/render v1.0.3
 	github.com/swaggo/http-swagger v1.3.4
@@ -35,4 +40,5 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+>>>>>>> ed41b50cc2fd92dbd0df12eafd134d95e2bbbd93
 )
