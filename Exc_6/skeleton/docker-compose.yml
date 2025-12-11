@@ -1,3 +1,5 @@
+version: "3.9"
+
 networks:
   web:
     name: web
@@ -6,23 +8,24 @@ networks:
 
 volumes:
   order_pg_vol:
-  # todo
+  order_minio_vol:
 
 services:
   traefik:
     image: "traefik:v3.5.2"
-    security_opt:
-      - no-new-privileges:true
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=web"
       - "--entryPoints.web.address=:80"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
     ports:
       - "80:80"
       - "8080:8080"
+    security_opt:
+      - "no-new-privileges:true"
     volumes:
-      # Add Docker as a mounted volume, so that Traefik can read the labels of other services
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - web
@@ -30,7 +33,7 @@ services:
   orderservice:
     build: .
     restart: unless-stopped
-    command: [ "/app/ordersystem" ]
+    command: ["/app/ordersystem"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.orders.rule=Host(`orders.localhost`)"
@@ -40,11 +43,14 @@ services:
       - POSTGRES_DB=order
       - POSTGRES_USER=docker
       - POSTGRES_PASSWORD=docker
-      - PGPORT=5555
+      - PGPORT=5432             # internal Postgres port
       - DB_HOST=order-postgres
       - S3_ACCESS_KEY_ID=root
       - S3_SECRET_ACCESS_KEY=verysecret
       - S3_ENDPOINT=order-minio:8500
+    depends_on:
+      - order-postgres
+      - order-minio
     networks:
       - intercom
       - web
@@ -65,24 +71,30 @@ services:
       - web
 
   order-postgres:
-    image: postgres:18
-    volumes:
-      - order_pg_vol:/var/lib/postgresql
+    image: postgres:16
     restart: always
-    networks:
-      - intercom
+    volumes:
+      - order_pg_vol:/var/lib/postgresql/data
     ports:
-      - "5555:5555"
+      - "5433:5432"             # host 5433 -> container 5432 (same as Exercise 5)
     environment:
       - POSTGRES_DB=order
       - POSTGRES_USER=docker
       - POSTGRES_PASSWORD=docker
-      - PGPORT=5555
+    networks:
+      - intercom
 
   order-minio:
-    # todo use minio/minio:latest as image
-    # expose 8500
-    # add to network intercom
-    # use the following commands: "server", "--address", ":8500", "/data"
-    # map the data volume
-    # set environment variables MINIO_ROOT_USER and MINIO_ROOT_PASSWORD
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--address", ":8500", "--console-address", ":9001"]
+    environment:
+      - MINIO_ROOT_USER=root
+      - MINIO_ROOT_PASSWORD=verysecret
+    volumes:
+      - order_minio_vol:/data
+    ports:
+      - "8500:8500"             # S3 API
+      - "9001:9001"             # Web console
+    networks:
+      - intercom
